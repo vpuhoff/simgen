@@ -1,16 +1,11 @@
 import os
-import sys
 import time
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 from PIL import Image
-from skimage import io
-from skimage.color import rgba2rgb
 
-sys.path.append('../')
 from models.nets import ComboNet
 
 
@@ -57,11 +52,7 @@ class FacialBeautyPredictor:
 
         img = self.save(img_file, img)
 
-        #img = Image.fromarray(img.astype(np.uint8))
-
         preprocess = transforms.Compose([
-            # transforms.Resize(224),
-            # transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
@@ -81,7 +72,7 @@ class FacialBeautyPredictor:
         }
 
     def save(self, img_file, img):
-         # Определение минимальной стороны для обрезки до квадрата
+        # Определение минимальной стороны для обрезки до квадрата
         min_side = min(img.size)
         # Обрезка до квадрата, центрирование
         left = (img.width - min_side) / 2
@@ -89,19 +80,21 @@ class FacialBeautyPredictor:
         right = (img.width + min_side) / 2
         bottom = (img.height + min_side) / 2
         img = img.crop((left, top, right, bottom))
-          # Преобразование: Resize до 224x224
+        # Преобразование: Resize до 224x224
         img = img.resize((224, 224))
         img.save(f'{img_file}.jpg', format='JPEG')
         return img
+
 
 def process_images_in_folder(folder_path, predictor):
     results = []
     for file_name in os.listdir(folder_path):
         file_path = os.path.join(folder_path, file_name)
-        if os.path.isfile(file_path) and file_path.lower().endswith(('.png')):
+        if os.path.isfile(file_path) and file_path.lower().endswith('.png'):
             result = predictor.infer(file_path)
             results.append((file_name, result))
     return results
+
 
 if __name__ == '__main__':
     fbp = FacialBeautyPredictor(pretrained_model_path='ComboNet_SCUTFBP5500.pth')
