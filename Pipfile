@@ -17,6 +17,9 @@ pytorchcv = "*"
 numpy = "==1.24.1"
 pyautogui = "*"
 keyboard = "*"
+playsound = "*"
+simpleaudio = "*"
+pygame = "*"
 
 [dev-packages]
 

@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 import pyautogui
 import keyboard
+import pygame
 
 sys.path.append('../')
 from models.nets import ComboNet
@@ -84,6 +85,7 @@ class FacialBeautyPredictor:
         img = img.crop((left, top, right, bottom))
         # Преобразование: Resize до 224x224
         img = img.resize((224, 224))
+        img.save("screen.jpg")
         return img
 
 def capture_screen(region=None):
@@ -98,12 +100,25 @@ def start_capture(fbp, region):
         img = capture_screen(region)
         result = fbp.infer(img)
         print(f"Beauty Score: {result['beauty']}, Time Elapsed: {result['elapse']} seconds")
+
+        # Эмуляция клика мыши, если значение 'beauty' меньше 3.8
+        if result['beauty'] < 3.75:
+            pyautogui.click(x=220, y=890)
+        else:
+            # Остановка цикла и звуковой сигнал, если значение 'beauty' >= 3.8
+            running = False
+            pygame.mixer.init()
+            pygame.mixer.music.load('alert_sound.mp3')  # Замените на путь к вашему звуковому файлу
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                time.sleep(1)  # Ожидание завершения воспроизведения
+
         time.sleep(2)  # Периодичность 2 секунды
 
 def main():
     global running
     fbp = FacialBeautyPredictor(pretrained_model_path='ComboNet_SCUTFBP5500.pth')
-    region = (850, 50, 850, 850)  # Определенная область захвата (x, y, width, height)
+    region = (1000, 50, 850, 850)  # Определенная область захвата (x, y, width, height)
 
     def start_thread():
         global running
