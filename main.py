@@ -1,10 +1,11 @@
-import os
 import time
-
+import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 from PIL import Image
+import pyautogui
+import keyboard
 
 from models.nets import ComboNet
 
@@ -43,14 +44,13 @@ class FacialBeautyPredictor:
         self.device = device
         self.model = model
 
-    def infer(self, img_file):
+    def infer(self, img):
         tik = time.time()
-        img = Image.open(img_file)
 
         if img.mode == 'RGBA':
             img = img.convert('RGB')
 
-        img = self.save(img_file, img)
+        img = self.process_image(img)
 
         preprocess = transforms.Compose([
             transforms.ToTensor(),
@@ -71,7 +71,7 @@ class FacialBeautyPredictor:
             'elapse': tok - tik
         }
 
-    def save(self, img_file, img):
+    def process_image(self, img):
         # Определение минимальной стороны для обрезки до квадрата
         min_side = min(img.size)
         # Обрезка до квадрата, центрирование
@@ -82,23 +82,29 @@ class FacialBeautyPredictor:
         img = img.crop((left, top, right, bottom))
         # Преобразование: Resize до 224x224
         img = img.resize((224, 224))
-        img.save(f'{img_file}.jpg', format='JPEG')
+        img.save(f'screen.jpg', format='JPEG')
         return img
 
 
-def process_images_in_folder(folder_path, predictor):
-    results = []
-    for file_name in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, file_name)
-        if os.path.isfile(file_path) and file_path.lower().endswith('.png'):
-            result = predictor.infer(file_path)
-            results.append((file_name, result))
-    return results
+def capture_screen(region=None):
+    screenshot = pyautogui.screenshot(region=region)
+    return screenshot
+
+
+def main():
+    fbp = FacialBeautyPredictor(pretrained_model_path='ComboNet_SCUTFBP5500.pth')
+    
+    def on_hotkey():
+        region = (850, 50, 850, 850)  # Определите область захвата (x, y, width, height)
+        img = capture_screen(region)
+        result = fbp.infer(img)
+        print(f"Beauty Score: {result['beauty']}, Time Elapsed: {result['elapse']} seconds")
+
+    keyboard.add_hotkey('alt+f1', on_hotkey)
+
+    print("Press ALT+F1 to capture the screen and analyze.")
+    keyboard.wait('esc')  # Приложение будет работать, пока не будет нажата клавиша ESC
 
 
 if __name__ == '__main__':
-    fbp = FacialBeautyPredictor(pretrained_model_path='ComboNet_SCUTFBP5500.pth')
-    folder_path = './test_images/'
-    results = process_images_in_folder(folder_path, fbp)
-    for file_name, result in results:
-        print(f"File: {file_name}, Beauty Score: {result['beauty']}, Time Elapsed: {result['elapse']} seconds")
+    main()
