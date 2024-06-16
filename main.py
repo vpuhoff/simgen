@@ -1,4 +1,6 @@
+import sys
 import time
+import threading
 import numpy as np
 import torch
 import torch.nn as nn
@@ -7,8 +9,8 @@ from PIL import Image
 import pyautogui
 import keyboard
 
+sys.path.append('../')
 from models.nets import ComboNet
-
 
 class FacialBeautyPredictor:
     """
@@ -82,29 +84,42 @@ class FacialBeautyPredictor:
         img = img.crop((left, top, right, bottom))
         # Преобразование: Resize до 224x224
         img = img.resize((224, 224))
-        img.save(f'screen.jpg', format='JPEG')
         return img
-
 
 def capture_screen(region=None):
     screenshot = pyautogui.screenshot(region=region)
     return screenshot
 
+running = False
 
-def main():
-    fbp = FacialBeautyPredictor(pretrained_model_path='ComboNet_SCUTFBP5500.pth')
-    
-    def on_hotkey():
-        region = (850, 50, 850, 850)  # Определите область захвата (x, y, width, height)
+def start_capture(fbp, region):
+    global running
+    while running:
         img = capture_screen(region)
         result = fbp.infer(img)
         print(f"Beauty Score: {result['beauty']}, Time Elapsed: {result['elapse']} seconds")
+        time.sleep(2)  # Периодичность 2 секунды
 
-    keyboard.add_hotkey('alt+f1', on_hotkey)
+def main():
+    global running
+    fbp = FacialBeautyPredictor(pretrained_model_path='ComboNet_SCUTFBP5500.pth')
+    region = (850, 50, 850, 850)  # Определенная область захвата (x, y, width, height)
 
-    print("Press ALT+F1 to capture the screen and analyze.")
+    def start_thread():
+        global running
+        if not running:
+            running = True
+            threading.Thread(target=start_capture, args=(fbp, region)).start()
+
+    def stop_thread():
+        global running
+        running = False
+
+    keyboard.add_hotkey('alt+f1', start_thread)
+    keyboard.add_hotkey('alt+f2', stop_thread)
+
+    print("Press ALT+F1 to start capturing and analyzing. Press ALT+F2 to stop.")
     keyboard.wait('esc')  # Приложение будет работать, пока не будет нажата клавиша ESC
-
 
 if __name__ == '__main__':
     main()
