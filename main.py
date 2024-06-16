@@ -9,6 +9,7 @@ from PIL import Image
 import pyautogui
 import keyboard
 import pygame
+import tkinter as tk
 
 sys.path.append('../')
 from models.nets import ComboNet
@@ -94,15 +95,18 @@ def capture_screen(region=None):
 
 running = False
 
-def start_capture(fbp, region):
+def start_capture(fbp, region, label):
     global running
     while running:
         img = capture_screen(region)
         result = fbp.infer(img)
         print(f"Beauty Score: {result['beauty']}, Time Elapsed: {result['elapse']} seconds")
 
+        # Обновление метки в GUI
+        label.config(text=f"Beauty Score: {result['beauty']:.2f}")
+
         # Эмуляция клика мыши, если значение 'beauty' меньше 3.8
-        if result['beauty'] < 3.75:
+        if result['beauty'] < 3.7:
             pyautogui.click(x=220, y=890)
         else:
             # Остановка цикла и звуковой сигнал, если значение 'beauty' >= 3.8
@@ -120,11 +124,18 @@ def main():
     fbp = FacialBeautyPredictor(pretrained_model_path='ComboNet_SCUTFBP5500.pth')
     region = (1000, 50, 850, 850)  # Определенная область захвата (x, y, width, height)
 
+    # Создание GUI
+    root = tk.Tk()
+    root.attributes("-topmost", True)  # Поверх всех окон
+    root.geometry("+400+0")  # Позиционирование в правом верхнем углу
+    label = tk.Label(root, text="Beauty Score: N/A", font=("Helvetica", 16))
+    label.pack()
+
     def start_thread():
         global running
         if not running:
             running = True
-            threading.Thread(target=start_capture, args=(fbp, region)).start()
+            threading.Thread(target=start_capture, args=(fbp, region, label)).start()
 
     def stop_thread():
         global running
@@ -134,7 +145,9 @@ def main():
     keyboard.add_hotkey('alt+f2', stop_thread)
 
     print("Press ALT+F1 to start capturing and analyzing. Press ALT+F2 to stop.")
-    keyboard.wait('esc')  # Приложение будет работать, пока не будет нажата клавиша ESC
+    threading.Thread(target=keyboard.wait, args=('esc',), daemon=True).start()  # Приложение будет работать, пока не будет нажата клавиша ESC
+
+    root.mainloop()
 
 if __name__ == '__main__':
     main()
